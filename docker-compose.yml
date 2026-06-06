@@ -1,18 +1,18 @@
 # docker-compose.yml - Gemma 4 12B (encoder-free, vision+audio, ctx 256K)
 #
 # Perfiles:
-#   cuda           -> NVIDIA (RTX 5070 Ti) | vLLM, imagen pin gemma4-unified
-#   llamacpp-cuda  -> NVIDIA (RTX 5070 Ti) | llama.cpp CUDA (GGUF, mas simple)
-#   llamacpp       -> AMD iGPU 780M (Ryzen 8700G) | llama.cpp Vulkan
+#   cuda           -> NVIDIA | vLLM (imagen pin gemma4-unified)
+#   llamacpp-cuda  -> NVIDIA | llama.cpp CUDA (GGUF, mas simple)
+#   llamacpp       -> GPU/iGPU AMD o Intel de consumo | llama.cpp Vulkan
 #   cpu            -> CPU x86 (pruebas) | vLLM CPU
 #
-# Apple Silicon (M4 Pro): Docker en Mac NO ve la GPU -> ruta nativa (README).
-# AMD: vLLM-ROCm solo soporta Instinct (MI300X+), NO el iGPU 780M -> usa llama.cpp.
+# Apple Silicon: Docker en Mac NO ve la GPU -> ruta nativa (README).
+# AMD: vLLM-ROCm solo soporta Instinct (MI300X+), NO las de consumo (RDNA) -> usa llama.cpp.
 #
 # Config en .env. Los GGUF se descargan solos con -hf (repo no gated).
 
 services:
-  # ============== NVIDIA / vLLM (RTX 5070 Ti, max throughput) ==============
+  # ============== NVIDIA / vLLM (max throughput) ==============
   gemma-cuda:
     # Imagen FIJADA: el 12B encoder-free aun no esta en :latest estable.
     #   CUDA 13: vllm/vllm-openai:gemma4-unified | CUDA 12.9: ...-cu129
@@ -42,7 +42,7 @@ services:
       start_period: 900s
     restart: unless-stopped
 
-  # ============== NVIDIA / llama.cpp CUDA (RTX 5070 Ti, simple) ==============
+  # ============== NVIDIA / llama.cpp CUDA (simple) ==============
   gemma-llamacpp-cuda:
     image: ${LLAMACPP_CUDA_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda}
     profiles: ["llamacpp-cuda"]
@@ -69,7 +69,7 @@ services:
       ${LLAMACPP_EXTRA:-}
     restart: unless-stopped
 
-  # ============== AMD iGPU 780M / llama.cpp Vulkan (Ryzen 8700G) ==============
+  # ============== GPU/iGPU AMD o Intel / llama.cpp Vulkan ==============
   gemma-llamacpp:
     image: ${LLAMACPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-vulkan}
     profiles: ["llamacpp"]
