@@ -122,6 +122,19 @@ CUDA 12.9 en vez de 13: `VLLM_CUDA_IMAGE=vllm/vllm-openai:gemma4-unified-cu129`.
 docker compose --profile llamacpp-cuda up -d
 ```
 
+**Ollama en GPU NVIDIA** (alternativa si el pull de ghcr.io va lento — la imagen
+está en Docker Hub, mucho más rápido; corre llama.cpp por debajo):
+
+```bash
+docker compose --profile ollama up -d
+docker exec -it gemma4-ollama ollama pull gemma4:12b   # una sola vez
+curl http://localhost:8000/v1/models
+```
+
+El modelo en la API se llama `gemma4:12b` (no `gemma-4-12b`). Concurrencia y
+contexto se controlan con `MAX_NUM_SEQS` y `LLAMACPP_CTX` del `.env`
+(`OLLAMA_NUM_PARALLEL` / `OLLAMA_CONTEXT_LENGTH`).
+
 **llama.cpp en GPU/iGPU AMD o Intel** (Vulkan):
 
 ```bash
@@ -234,6 +247,10 @@ funcional para vLLM**, y el bf16 (~24 GB) no entra en 16 GB. **En GPU de consumo
 (16–24 GB) usa el perfil `llamacpp-cuda`** (GGUF QAT, sin estos bugs); reserva
 vLLM para GPU de 40 GB+ con bf16 (`unsloth/gemma-4-12b-it`) o hasta que Unsloth
 corrija el w4a16.
+
+**Pull de `ghcr.io/ggml-org/llama.cpp` lento o que se corta.** ghcr.io a veces
+va mal. Reintenta (`docker pull` reanuda las capas ya bajadas) o usa el perfil
+**`ollama`** (imagen en Docker Hub, descarga rápida, mismo motor llama.cpp).
 
 **OOM al cargar / KV cache.** Baja `MAX_MODEL_LEN` (p.ej. 65536), reduce
 `MAX_NUM_SEQS`, mantén `KV_CACHE_DTYPE=fp8`, o usa un quant más pequeño.

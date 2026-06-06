@@ -3,6 +3,7 @@
 # Perfiles:
 #   cuda           -> NVIDIA | vLLM (imagen pin gemma4-unified)
 #   llamacpp-cuda  -> NVIDIA | llama.cpp CUDA (GGUF, mas simple)
+#   ollama         -> NVIDIA | Ollama desde Docker Hub (descarga rapida)
 #   llamacpp       -> GPU/iGPU AMD o Intel de consumo | llama.cpp Vulkan
 #   cpu            -> CPU x86 (pruebas) | vLLM CPU
 #
@@ -71,6 +72,31 @@ services:
       --temp 1.0 --top-p 0.95 --top-k 64
       --host 0.0.0.0 --port 8000
       ${LLAMACPP_EXTRA:-}
+    restart: unless-stopped
+
+  # ============== NVIDIA / Ollama (imagen en Docker Hub, pull rapido) ==============
+  # Alternativa cuando ghcr.io va lento. Corre llama.cpp por debajo.
+  # Tras arrancar, descarga el modelo UNA vez:
+  #   docker exec -it gemma4-ollama ollama pull gemma4:12b
+  # Endpoint OpenAI: http://localhost:8000/v1  (model: "gemma4:12b")
+  gemma-ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    profiles: ["ollama"]
+    container_name: gemma4-ollama
+    ports: ["${PORT:-8000}:11434"]
+    volumes:
+      - ${OLLAMA_DATA:-${HOME}/.ollama}:/root/.ollama
+    environment:
+      OLLAMA_NUM_PARALLEL: ${MAX_NUM_SEQS:-3}
+      OLLAMA_CONTEXT_LENGTH: ${LLAMACPP_CTX:-131072}
+      OLLAMA_KEEP_ALIVE: "-1"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${NVIDIA_GPU_COUNT:-all}
+              capabilities: ["gpu"]
     restart: unless-stopped
 
   # ============== GPU/iGPU AMD o Intel / llama.cpp Vulkan ==============
