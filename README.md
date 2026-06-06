@@ -21,7 +21,7 @@ Todo se controla por `.env`. Los GGUF se descargan solos con `-hf`.
 | Tu hardware | Motor recomendado | Perfil |
 |---|---|---|
 | GPU NVIDIA de centro de datos (≥40 GB: A100/H100/L40S/RTX 6000 Ada…) | vLLM bf16 | `cuda` |
-| GPU NVIDIA de consumo (16–24 GB) | vLLM w4a16, **o** llama.cpp CUDA (GGUF) | `cuda` / `llamacpp-cuda` |
+| GPU NVIDIA de consumo (16–24 GB) | **llama.cpp CUDA (GGUF)** — vLLM aún no tiene w4a16 funcional | `llamacpp-cuda` |
 | GPU AMD Instinct (MI300X/MI325X/MI350X/MI355X) | vLLM-ROCm | (ver nota AMD) |
 | GPU/iGPU AMD o Intel de consumo | llama.cpp Vulkan | `llamacpp` |
 | Apple Silicon (Mac M-series) | llama.cpp Metal / MLX (**nativo, sin Docker**) | — |
@@ -224,6 +224,16 @@ descarga el snapshot y añade `num_soft_tokens=280`). Si prefieres, ponlo en
 `off` y corre **text-only** (`LIMIT_MM_PER_PROMPT={"image":0,"audio":0}`), o usa
 el perfil **`llamacpp-cuda`** (GGUF QAT + mmproj), que no tiene este problema y
 encaja mejor en 16 GB para multimodal.
+
+**`There is no module or parameter named 'vision_embedder.patch_dense.weight'`
+(vLLM, perfil `cuda`).** Segundo bug de empaquetado del checkpoint **w4a16** de
+Unsloth: la capa del embebedor de visión quedó sin cuantizar (en la lista
+`ignore`) pero vLLM la trata como cuantizada. **No se puede arreglar desde el
+entrypoint** (es a nivel de pesos). Hoy por hoy **no hay checkpoint w4a16
+funcional para vLLM**, y el bf16 (~24 GB) no entra en 16 GB. **En GPU de consumo
+(16–24 GB) usa el perfil `llamacpp-cuda`** (GGUF QAT, sin estos bugs); reserva
+vLLM para GPU de 40 GB+ con bf16 (`unsloth/gemma-4-12b-it`) o hasta que Unsloth
+corrija el w4a16.
 
 **OOM al cargar / KV cache.** Baja `MAX_MODEL_LEN` (p.ej. 65536), reduce
 `MAX_NUM_SEQS`, mantén `KV_CACHE_DTYPE=fp8`, o usa un quant más pequeño.
