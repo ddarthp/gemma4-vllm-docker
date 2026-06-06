@@ -11,9 +11,10 @@ RUN chmod +x /entrypoint.sh
 ENV MODEL=google/gemma-4-12B-it \
     SERVED_MODEL_NAME=gemma-4-12b \
     DTYPE=bfloat16 \
-    MAX_MODEL_LEN=200000 \
+    MAX_MODEL_LEN=131072 \
     MAX_NUM_SEQS=3 \
-    GPU_MEMORY_UTILIZATION=0.90 \
+    GPU_MEMORY_UTILIZATION=0.92 \
+    KV_CACHE_DTYPE=fp8 \
     TENSOR_PARALLEL_SIZE=1 \
     LIMIT_MM_PER_PROMPT='{"image": 4, "audio": 1}' \
     VISION_MAX_SOFT_TOKENS=280 \

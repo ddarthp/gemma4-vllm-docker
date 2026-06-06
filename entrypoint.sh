@@ -17,11 +17,11 @@ SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-gemma-4-12b}"
 DTYPE="${DTYPE:-bfloat16}"
 
 # ----- Contexto y concurrencia -----
-MAX_MODEL_LEN="${MAX_MODEL_LEN:-200000}"   # max 262144 (256K)
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-131072}"   # default consumo 128K; max 262144
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-3}"          # clientes concurrentes
 
 # ----- Memoria GPU / paralelismo -----
-GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.90}"
+GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.92}"
 TENSOR_PARALLEL_SIZE="${TENSOR_PARALLEL_SIZE:-1}"
 
 # ----- Multimodal (vision + audio, encoder-free) -----
@@ -39,7 +39,7 @@ PORT="${PORT:-8000}"
 
 # ----- Opcionales -----
 ASYNC_SCHEDULING="${ASYNC_SCHEDULING:-1}"
-KV_CACHE_DTYPE="${KV_CACHE_DTYPE:-}"       # fp8 -> ~50% menos KV cache
+KV_CACHE_DTYPE="${KV_CACHE_DTYPE:-fp8}"    # default consumo; fp8 -> ~50% menos KV
 ROPE_SCALING="${ROPE_SCALING:-}"           # solo si superas el ctx nativo
 QUANTIZATION="${QUANTIZATION:-}"           # p.ej. compressed-tensors / awq / fp8
 VLLM_API_KEY="${VLLM_API_KEY:-}"
