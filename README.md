@@ -104,8 +104,9 @@ hace con `--jinja` (plantilla embebida en el GGUF).
 cp .env.example .env      # edita HF_TOKEN y ajusta a tu hardware
 ```
 
-**vLLM en GPU NVIDIA** (imagen fijada `gemma4-unified`; en 16–24 GB define
-`MODEL` w4a16 + `QUANTIZATION=compressed-tensors` + `KV_CACHE_DTYPE=fp8`):
+**vLLM en GPU NVIDIA** (imagen fijada `gemma4-unified`). El default ya es un
+checkpoint **w4a16 (QAT) de Unsloth, no gated** (`unsloth/gemma-4-12B-it-qat-w4a16`,
+~10 GB) que arranca **sin token** en 16–24 GB; vLLM detecta la cuantización solo:
 
 ```bash
 docker compose --profile cuda up -d
@@ -148,9 +149,11 @@ llama-server \
 # pip install mlx-lm && mlx_lm.server --model mlx-community/gemma-4-12B-it --port 8000
 ```
 
-> El repo de Google en HF es *gated*: acepta la licencia en
-> <https://huggingface.co/google/gemma-4-12B-it> y pon tu `HF_TOKEN` en `.env`.
-> Los GGUF de Unsloth **no** son gated (no requieren token).
+> **Token:** con los **defaults (Unsloth, no gated) no necesitas `HF_TOKEN`**.
+> Solo hace falta si cambias `MODEL` al repo **oficial de Google** (gated):
+> acepta la licencia en <https://huggingface.co/google/gemma-4-12B-it> y pon el
+> token en `.env`. Variantes vLLM: bf16 (40 GB+) `unsloth/gemma-4-12b-it`;
+> oficial gated `google/gemma-4-12B-it`.
 
 ---
 
@@ -183,7 +186,7 @@ Para conectar un agente (Continue, Aider, OpenCode, etc.):
 
 | Variable | Default | Qué hace |
 |---|---|---|
-| `MODEL` / `QUANTIZATION` | `google/gemma-4-12B-it` / — | En 16–24 GB: repo w4a16 + `compressed-tensors`. |
+| `MODEL` / `QUANTIZATION` | `unsloth/gemma-4-12B-it-qat-w4a16` / — | w4a16 QAT no gated (sin token); vLLM auto-detecta la cuantización. bf16: `unsloth/gemma-4-12b-it`. |
 | `MAX_MODEL_LEN` | `200000` | Contexto (máx 262144 / 256K). |
 | `MAX_NUM_SEQS` | `3` | Clientes concurrentes. |
 | `KV_CACHE_DTYPE` | — | `fp8` ≈ −50% KV cache. |

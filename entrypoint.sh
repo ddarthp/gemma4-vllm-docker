@@ -10,9 +10,10 @@
 set -euo pipefail
 
 # ----- Modelo -----
-# Para 16GB de VRAM usa un checkpoint w4a16 (ver README): apunta MODEL al
-# repo cuantizado, p.ej. una version compressed-tensors / AWQ de gemma-4-12B-it.
-MODEL="${MODEL:-google/gemma-4-12B-it}"
+# Default: checkpoint w4a16 (QAT) de Unsloth, NO gated (sin token), cabe en
+# 16-24GB. vLLM detecta compressed-tensors solo. Para bf16 (40GB+) usa
+# unsloth/gemma-4-12b-it; oficial gated: google/gemma-4-12B-it.
+MODEL="${MODEL:-unsloth/gemma-4-12B-it-qat-w4a16}"
 SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-gemma-4-12b}"
 DTYPE="${DTYPE:-bfloat16}"
 

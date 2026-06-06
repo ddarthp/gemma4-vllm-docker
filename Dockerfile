@@ -8,7 +8,7 @@ FROM ${BASE_IMAGE}
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENV MODEL=google/gemma-4-12B-it \
+ENV MODEL=unsloth/gemma-4-12B-it-qat-w4a16 \
     SERVED_MODEL_NAME=gemma-4-12b \
     DTYPE=bfloat16 \
     MAX_MODEL_LEN=131072 \
