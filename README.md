@@ -208,6 +208,29 @@ Para conectar un agente (Continue, Aider, OpenCode, etc.):
 
 ---
 
+---
+
+## Troubleshooting
+
+**`set: pipefail: invalid option name` (bucle de reinicios).** Fin de línea
+CRLF en `entrypoint.sh` (típico en Windows). Ya está mitigado (el compose limpia
+el CR en runtime y `.gitattributes` fuerza LF). Haz `git pull` y
+`docker compose --profile <perfil> up -d --force-recreate`.
+
+**`'Gemma4UnifiedVisionConfig' object has no attribute 'num_soft_tokens'`
+(vLLM, perfil `cuda`).** El checkpoint **w4a16** de Unsloth omite ese campo en su
+`config.json`. El entrypoint lo **parchea automáticamente** (`PATCH_VISION_SOFT_TOKENS=auto`,
+descarga el snapshot y añade `num_soft_tokens=280`). Si prefieres, ponlo en
+`off` y corre **text-only** (`LIMIT_MM_PER_PROMPT={"image":0,"audio":0}`), o usa
+el perfil **`llamacpp-cuda`** (GGUF QAT + mmproj), que no tiene este problema y
+encaja mejor en 16 GB para multimodal.
+
+**OOM al cargar / KV cache.** Baja `MAX_MODEL_LEN` (p.ej. 65536), reduce
+`MAX_NUM_SEQS`, mantén `KV_CACHE_DTYPE=fp8`, o usa un quant más pequeño.
+
+**Lento / "WSL detected, pin_memory=False".** Es normal en Docker Desktop sobre
+WSL2; para máximo rendimiento conviene Linux nativo con NVIDIA Container Toolkit.
+
 ## Fuentes
 
 - GGUF QAT (Unsloth): <https://huggingface.co/unsloth/gemma-4-12B-it-qat-GGUF> · GGUF estándar + MTP: <https://huggingface.co/unsloth/gemma-4-12b-it-GGUF>

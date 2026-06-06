@@ -46,6 +46,36 @@ QUANTIZATION="${QUANTIZATION:-}"           # p.ej. compressed-tensors / awq / fp
 VLLM_API_KEY="${VLLM_API_KEY:-}"
 EXTRA_ARGS="${EXTRA_ARGS:-}"
 
+# --- Workaround checkpoints w4a16: algunos (p.ej. unsloth/...-qat-w4a16)
+# omiten vision_config.num_soft_tokens y vLLM crashea en multimodal. Descargamos
+# el snapshot y añadimos el campo. PATCH_VISION_SOFT_TOKENS=auto|<int>|off. ---
+PATCH_VISION_SOFT_TOKENS="${PATCH_VISION_SOFT_TOKENS:-auto}"
+if [ "$PATCH_VISION_SOFT_TOKENS" != "off" ] && [[ "$MODEL" != /* ]] && [[ "$LIMIT_MM_PER_PROMPT" != *'"image": 0'* ]]; then
+  _nst=280; [ "$PATCH_VISION_SOFT_TOKENS" != "auto" ] && _nst="$PATCH_VISION_SOFT_TOKENS"
+  _patched="$(python3 - "$MODEL" "$_nst" <<'PYEOF'
+import json, os, sys
+from huggingface_hub import snapshot_download
+repo, val = sys.argv[1], int(sys.argv[2])
+try:
+    path = snapshot_download(repo)
+    cfg = os.path.join(path, "config.json")
+    with open(cfg) as f:
+        d = json.load(f)
+    vc = d.get("vision_config")
+    if isinstance(vc, dict) and "num_soft_tokens" not in vc:
+        vc["num_soft_tokens"] = val
+        with open(cfg, "w") as f:
+            json.dump(d, f, indent=2)
+        sys.stderr.write(f"[entrypoint] añadido vision_config.num_soft_tokens={val}\n")
+    print(path)
+except Exception as e:
+    sys.stderr.write(f"[entrypoint] patch omitido ({e}); uso MODEL original\n")
+    print(repo)
+PYEOF
+)"
+  [ -n "$_patched" ] && MODEL="$_patched"
+fi
+
 ARGS=(
   --model "$MODEL"
   --served-model-name "$SERVED_MODEL_NAME"
