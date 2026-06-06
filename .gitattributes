@@ -1,0 +1,6 @@
+# Normaliza saltos de linea a LF (evita que Windows rompa los .sh en el contenedor)
+* text=auto eol=lf
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf

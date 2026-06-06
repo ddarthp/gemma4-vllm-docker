@@ -6,7 +6,7 @@ ARG BASE_IMAGE=vllm/vllm-openai:gemma4-unified
 FROM ${BASE_IMAGE}
 
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 ENV MODEL=unsloth/gemma-4-12B-it-qat-w4a16 \
     SERVED_MODEL_NAME=gemma-4-12b \

@@ -7,9 +7,10 @@
 #   cpu            -> CPU x86 (pruebas) | vLLM CPU
 #
 # Apple Silicon: Docker en Mac NO ve la GPU -> ruta nativa (README).
-# AMD: vLLM-ROCm solo soporta Instinct (MI300X+), NO las de consumo (RDNA) -> usa llama.cpp.
+# AMD: vLLM-ROCm solo soporta Instinct (MI300X+), NO las de consumo (RDNA).
 #
 # Config en .env. Los GGUF se descargan solos con -hf (repo no gated).
+# El entrypoint se ejecuta limpiando CR (tolerante a checkouts CRLF en Windows).
 
 services:
   # ============== NVIDIA / vLLM (max throughput) ==============
@@ -19,7 +20,10 @@ services:
     image: ${VLLM_CUDA_IMAGE:-vllm/vllm-openai:gemma4-unified}
     profiles: ["cuda"]
     container_name: gemma4-cuda
-    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    entrypoint:
+      - /bin/bash
+      - -c
+      - 'tr -d "$(printf ''\r'')" < /entrypoint.sh > /tmp/ep.sh && exec bash /tmp/ep.sh'
     env_file: .env
     ports: ["${PORT:-8000}:8000"]
     volumes:
@@ -61,7 +65,7 @@ services:
     command: >
       -hf ${GGUF_HF_REPO:-unsloth/gemma-4-12B-it-qat-GGUF}:${GGUF_QUANT:-UD-Q4_K_XL}
       --alias ${SERVED_MODEL_NAME:-gemma-4-12b}
-      -c ${LLAMACPP_CTX:-262144}
+      -c ${LLAMACPP_CTX:-131072}
       --parallel ${MAX_NUM_SEQS:-3}
       -ngl 999 --jinja --flash-attn on
       --temp 1.0 --top-p 0.95 --top-k 64
@@ -83,7 +87,7 @@ services:
     command: >
       -hf ${GGUF_HF_REPO:-unsloth/gemma-4-12B-it-qat-GGUF}:${GGUF_QUANT:-UD-Q4_K_XL}
       --alias ${SERVED_MODEL_NAME:-gemma-4-12b}
-      -c ${LLAMACPP_CTX:-262144}
+      -c ${LLAMACPP_CTX:-131072}
       --parallel ${MAX_NUM_SEQS:-3}
       -ngl 999 --jinja
       --temp 1.0 --top-p 0.95 --top-k 64
@@ -96,7 +100,10 @@ services:
     image: ${VLLM_CPU_IMAGE:-vllm/vllm-openai-cpu:latest-x86_64}
     profiles: ["cpu"]
     container_name: gemma4-cpu
-    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    entrypoint:
+      - /bin/bash
+      - -c
+      - 'tr -d "$(printf ''\r'')" < /entrypoint.sh > /tmp/ep.sh && exec bash /tmp/ep.sh'
     env_file: .env
     ports: ["${PORT:-8000}:8000"]
     volumes:
