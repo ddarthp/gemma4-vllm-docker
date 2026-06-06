@@ -1,0 +1,106 @@
+# docker-compose.yml - Gemma 4 12B (encoder-free, vision+audio, ctx 256K)
+#
+# Perfiles:
+#   cuda           -> NVIDIA (RTX 5070 Ti) | vLLM, imagen pin gemma4-unified
+#   llamacpp-cuda  -> NVIDIA (RTX 5070 Ti) | llama.cpp CUDA (GGUF, mas simple)
+#   llamacpp       -> AMD iGPU 780M (Ryzen 8700G) | llama.cpp Vulkan
+#   cpu            -> CPU x86 (pruebas) | vLLM CPU
+#
+# Apple Silicon (M4 Pro): Docker en Mac NO ve la GPU -> ruta nativa (README).
+# AMD: vLLM-ROCm solo soporta Instinct (MI300X+), NO el iGPU 780M -> usa llama.cpp.
+#
+# Config en .env. Los GGUF se descargan solos con -hf (repo no gated).
+
+services:
+  # ============== NVIDIA / vLLM (RTX 5070 Ti, max throughput) ==============
+  gemma-cuda:
+    # Imagen FIJADA: el 12B encoder-free aun no esta en :latest estable.
+    #   CUDA 13: vllm/vllm-openai:gemma4-unified | CUDA 12.9: ...-cu129
+    image: ${VLLM_CUDA_IMAGE:-vllm/vllm-openai:gemma4-unified}
+    profiles: ["cuda"]
+    container_name: gemma4-cuda
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    env_file: .env
+    ports: ["${PORT:-8000}:8000"]
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh:ro
+      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/root/.cache/huggingface
+    ipc: host
+    shm_size: "16gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${NVIDIA_GPU_COUNT:-all}
+              capabilities: ["gpu"]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 900s
+    restart: unless-stopped
+
+  # ============== NVIDIA / llama.cpp CUDA (RTX 5070 Ti, simple) ==============
+  gemma-llamacpp-cuda:
+    image: ${LLAMACPP_CUDA_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda}
+    profiles: ["llamacpp-cuda"]
+    container_name: gemma4-llamacpp-cuda
+    env_file: .env
+    ports: ["${PORT:-8000}:8000"]
+    volumes:
+      - ${LLAMACPP_CACHE:-${HOME}/.cache/llama.cpp}:/root/.cache/llama.cpp
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${NVIDIA_GPU_COUNT:-all}
+              capabilities: ["gpu"]
+    command: >
+      -hf ${GGUF_HF_REPO:-unsloth/gemma-4-12B-it-qat-GGUF}:${GGUF_QUANT:-UD-Q4_K_XL}
+      --alias ${SERVED_MODEL_NAME:-gemma-4-12b}
+      -c ${LLAMACPP_CTX:-262144}
+      --parallel ${MAX_NUM_SEQS:-3}
+      -ngl 999 --jinja --flash-attn on
+      --temp 1.0 --top-p 0.95 --top-k 64
+      --host 0.0.0.0 --port 8000
+      ${LLAMACPP_EXTRA:-}
+    restart: unless-stopped
+
+  # ============== AMD iGPU 780M / llama.cpp Vulkan (Ryzen 8700G) ==============
+  gemma-llamacpp:
+    image: ${LLAMACPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-vulkan}
+    profiles: ["llamacpp"]
+    container_name: gemma4-llamacpp
+    env_file: .env
+    ports: ["${PORT:-8000}:8000"]
+    volumes:
+      - ${LLAMACPP_CACHE:-${HOME}/.cache/llama.cpp}:/root/.cache/llama.cpp
+    devices: ["/dev/dri"]
+    group_add: ["video", "render"]
+    command: >
+      -hf ${GGUF_HF_REPO:-unsloth/gemma-4-12B-it-qat-GGUF}:${GGUF_QUANT:-UD-Q4_K_XL}
+      --alias ${SERVED_MODEL_NAME:-gemma-4-12b}
+      -c ${LLAMACPP_CTX:-262144}
+      --parallel ${MAX_NUM_SEQS:-3}
+      -ngl 999 --jinja
+      --temp 1.0 --top-p 0.95 --top-k 64
+      --host 0.0.0.0 --port 8000
+      ${LLAMACPP_EXTRA:-}
+    restart: unless-stopped
+
+  # ============== CPU x86 / vLLM (pruebas) ==============
+  gemma-cpu:
+    image: ${VLLM_CPU_IMAGE:-vllm/vllm-openai-cpu:latest-x86_64}
+    profiles: ["cpu"]
+    container_name: gemma4-cpu
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    env_file: .env
+    ports: ["${PORT:-8000}:8000"]
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh:ro
+      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/root/.cache/huggingface
+    shm_size: "16gb"
+    restart: unless-stopped
